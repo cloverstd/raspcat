@@ -1,0 +1,16 @@
+{
+  "name": "raspcat",
+  "version": "0.0.1",
+  "authors": [
+    "cloverstd <cloverstd@gmail.com>"
+  ],
+  "description": "raspberry pi status monitor",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
