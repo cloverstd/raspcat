@@ -32,6 +32,11 @@
                                 </td>
                             </tr>
                             <tr>
+                                <td colspan="5">
+                                    <progressbar animate="false" value="(mem.memory.used/mem.memory.total) * 100" type="success"><b>{{ ((mem.memory.used/mem.memory.total) * 100).toFixed(2) }}%</b></progressbar>
+                                </td>
+                            </tr>
+                            <tr>
                                 <td>Swap</td>
                                 <td>{{ mem.swap.total|bytes2human }}</td>
                                 <td>{{ mem.swap.used|bytes2human }}</td>
@@ -177,6 +182,64 @@
                 </div>
             </div>
         </div>
+        <div class="box">
+            <div class="panel panel-default" ng-controller="procController">
+                <!-- Default panel contents -->
+                <div class="panel-heading text-center">Processes</div>
+                <div class="panel-body">
+
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>PID</th>
+                                <th>PPID</th>
+                                <th>Name</th>
+                                <th>Username</th>
+                                <th>exe</th>
+                                <th>cwd</th>
+                                <th>Create Time</th>
+                                <th>Memory Percent</th>
+                                <th>CPU Percent</th>
+                                <th>Status</th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th>
+                                    <select ng-model="user">
+                                        <option value="">--ALL--</option>
+                                        <option ng-repeat="p in users" value="{{ p }}">{{ p }}</option>
+                                    </select>
+                                </th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="proc in processes|filter: user">
+                                <td>{{ proc.pid }}</td>
+                                <td>{{ proc.ppid }}</td>
+                                <td>{{ proc.name }}</td>
+                                <td>{{ proc.username }}</td>
+                                <td>{{ proc.exe }}</td>
+                                <td>{{ proc.cwd }}</td>
+                                <td>{{ proc.create_time }}</td>
+                                <td>{{ proc.memory_percent }}</td>
+                                <td>{{ proc.cpu_percent }}</td>
+                                <td>{{ proc.status }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="col-md-4">
         <div class="box">
@@ -209,6 +272,61 @@
                                 <td>{{ nic.bytes.per_sec.sent|bytes2human }}/s</td>
                                 <td>{{ nic.packets.per_sec.recv }}</td>
                                 <td>{{ nic.packets.per_sec.sent }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                </div>
+            </div>
+        </div>
+        <div class="box">
+            <div class="panel panel-default" ng-controller="netConnectionsController">
+                <!-- Default panel contents -->
+                <div class="panel-heading text-center">Net Connections</div>
+                <div class="panel-body">
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th class="text-center">PID</th>
+                                <th class="text-center">Proto</th>
+                                <th class="text-center">Local address</th>
+                                <th class="text-center">Remote address</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Program name</th>
+                            </tr><tr>
+                                <th class="text-center">
+
+                                </th>
+                                <th class="text-center">
+                                    <select ng-model="proto">
+                                        <option value="">--ALL--</option>
+                                        <option ng-repeat="p in protoes" value="{{ p }}">{{ p }}</option>
+                                    </select>
+                                </th>
+                                <th class="text-center">
+                                </th>
+                                <th class="text-center">
+                                </th>
+                                <th class="text-center">
+                                    <select ng-model="statusFilter">
+                                        <option value="">--ALL--</option>
+                                        <option ng-repeat="p in status" value="{{ p }}">{{ p }}</option>
+                                    </select>
+                                </th>
+                                <th class="text-center">
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr ng-repeat="connection in connections|filter: proto|filter: statusFilter">
+                                <td>{{ connection.pid }}</td>
+                                <td>{{ connection.proto }}</td>
+                                <td>{{ connection.local }}</td>
+                                <td>{{ connection.remote }}</td>
+                                <td>{{ connection.status }}</td>
+                                <td>{{ connection.program }}</td>
                             </tr>
                         </tbody>
                     </table>

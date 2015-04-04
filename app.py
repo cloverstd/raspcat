@@ -3,13 +3,12 @@
 
 import threading
 import datetime
-import signal
-import sys
 import socket
 import urllib2
 import netifaces
 import time
 import psutil
+from socket import AF_INET, SOCK_STREAM, SOCK_DGRAM
 from flask import Flask, render_template, jsonify
 from gevent.wsgi import WSGIServer
 from gevent import monkey, sleep
@@ -275,6 +274,52 @@ class StautsInfo(threading.Thread):
         return net_io
 
 
+    def get_net_connections(self):
+        AD = "-"
+        AF_INET6 = getattr(socket, 'AF_INET6', object())
+        proto_map = {
+            (AF_INET, SOCK_STREAM): 'tcp',
+            (AF_INET6, SOCK_STREAM): 'tcp6',
+            (AF_INET, SOCK_DGRAM): 'udp',
+            (AF_INET6, SOCK_DGRAM): 'udp6',
+        }
+        proc_names = {}
+        for p in psutil.process_iter():
+            try:
+                proc_names[p.pid] = p.name()
+            except psutil.Error:
+                pass
+
+        rv = list()
+        for c in psutil.net_connections(kind='inet'):
+            laddr = "%s:%s" % (c.laddr)
+            raddr = ""
+            if c.raddr:
+                raddr = "%s:%s" % (c.raddr)
+
+            temp = {
+                'proto': proto_map[(c.family, c.type)],
+                'local': laddr,
+                'remote': raddr or AD,
+                'status': c.status,
+                'pid': c.pid or AD,
+                'program': proc_names.get(c.pid, '?')[:15]
+            }
+            rv.append(temp)
+
+        return rv
+
+
+    def get_processes(self):
+        processes = list()
+        for proc in psutil.process_iter():
+            try:
+                processes.append(proc.as_dict())
+            except psutil.NoSuchProcess:
+                pass
+
+        return processes
+
 
     def run(self):
         while True:
@@ -304,6 +349,8 @@ class StautsInfo(threading.Thread):
             data['disk']['io'] = self.get_disk_io(False)
             data['disk']['perdisk_io'] = self.get_disk_io_perdisk(False)
             data['net'] = self.get_net_info(False)
+            data['net']['connections'] = self.get_net_connections()
+            data['processes'] = self.get_processes()
             #socketio.emit('event', data)
             return data
 

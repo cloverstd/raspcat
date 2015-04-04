@@ -1,12 +1,9 @@
 var app = angular.module('raspcat', ['ui.bootstrap', 'highcharts-ng']);
 
-app.run(function($rootScope) {
+app.run(function($rootScope, $http, $timeout) {
     $rootScope.indexTpl = "/static/tpl/index.html";
     $rootScope.memTpl = "/static/tpl/mem.html";
-});
-
-app.factory('status', function($rootScope, $http, $timeout) {
-    return function() {
+    (function() {
         var timeout = 5000;
         function run() {
             $http.get('/ssss/1')
@@ -21,8 +18,9 @@ app.factory('status', function($rootScope, $http, $timeout) {
             });
         }
         run();
-    }();
+    }());
 });
+
 
 app.filter('progressbarType', function() {
     return function(input) {
@@ -52,13 +50,13 @@ app.filter('bytes2human', function() {
 
 
 
-app.controller('memController', function($scope, $http, status) {
+app.controller('memController', function($scope, $http) {
     $scope.$on('status', function(ev, data) {
         $scope.mem = data.mem;
     });
 });
 
-app.controller('statusController', function($scope, $http, status) {
+app.controller('statusController', function($scope, $http) {
     $scope.$on('status', function(ev, data) {
         $scope.users = data.users;
         $scope.time = data.time;
@@ -75,7 +73,7 @@ app.controller('statusController', function($scope, $http, status) {
     });
 });
 
-app.controller('diskController', function($scope, $http, status, $filter) {
+app.controller('diskController', function($scope, $http, $filter) {
     $scope.chartConfig = {
         options: {
             chart: {
@@ -149,7 +147,7 @@ app.controller('diskController', function($scope, $http, status, $filter) {
 });
 
 
-app.controller('cpuController', function($scope, $http, status) {
+app.controller('cpuController', function($scope, $http) {
     $scope.percentChartConfig = {
         options: {
             chart: {
@@ -275,8 +273,40 @@ app.controller('cpuController', function($scope, $http, status) {
 });
 
 
-app.controller('netController', function($scope, $http, status) {
+app.controller('netController', function($scope, $http) {
     $scope.$on('status', function(ev, data) {
         $scope.net = data.net;
+    });
+});
+
+app.controller('netConnectionsController', function($scope, $http) {
+
+    $scope.$on('status', function(ev, data) {
+        $scope.connections = data.net.connections;
+        $scope.protoes = [];
+        $scope.status = [];
+        for (var i = 0; i < data.net.connections.length; i++) {
+            var proto = data.net.connections[i].proto;
+            var status = data.net.connections[i].status;
+            if ($scope.protoes.indexOf(proto) <= -1) {
+                $scope.protoes.push(proto);
+            }
+            if ($scope.status.indexOf(status) <= -1) {
+                $scope.status.push(status);
+            }
+        }
+    });
+});
+
+app.controller('procController', function($scope, $http) {
+    $scope.$on('status', function(ev, data) {
+        $scope.processes = data.processes;
+        $scope.users = [];
+        for (var i = 0; i < data.processes.length; i++) {
+            var username = data.processes[i].username;
+            if ($scope.users.indexOf(username) <= -1) {
+                $scope.users.push(username);
+            }
+        }
     });
 });
