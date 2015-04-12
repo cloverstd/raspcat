@@ -7,24 +7,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='bower_components/fontawesome/css/font-awesome.min.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body>
+<body ng-app="raspcat">
 
-    
+    <div ng-include="'/static/tpl/nav.html'">
+    </div>
 
-    <div class="container-fluid" ng-app="raspcat">
+    <div class="container-fluid">
         <div ng-include="'/static/tpl/index.html'"></div>
     </div>
 
 
+    <script src="{{ url_for('static', filename='bower_components/moment/min/moment-with-locales.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bower_components/angular/angular.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bower_components/angular-route/angular-route.min.js') }}"></script>
-    <script src="http://cdn.staticfile.org/socket.io/0.9.16/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='bower_components/angular-moment/angular-moment.min.js') }}"></script>
     <script src="http://cdn.staticfile.org/highcharts/4.0.4/adapters/standalone-framework.js"></script>
     <script src="http://cdn.staticfile.org/highcharts/4.0.4/highcharts.js"></script>
     <script src="{{ url_for('static', filename='bower_components/angular-bootstrap/ui-bootstrap.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js') }}"></script>
     <script src="{{ url_for('static', filename='bower_components/highcharts-ng/dist/highcharts-ng.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='bower_components/angular-socket-io/socket.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

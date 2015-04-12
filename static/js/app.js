@@ -1,24 +1,13 @@
-var app = angular.module('raspcat', ['ui.bootstrap', 'highcharts-ng']);
+var app = angular.module('raspcat', ['ui.bootstrap', 'highcharts-ng', 'angularMoment']);
+
+
+app.constant('angularMomentConfig', {
+    preprocess: 'unix'
+});
+
 
 app.run(function($rootScope, $http, $timeout) {
     $rootScope.indexTpl = "/static/tpl/index.html";
-    $rootScope.memTpl = "/static/tpl/mem.html";
-    (function() {
-        var timeout = 5000;
-        function run() {
-            $http.get('/ssss/1')
-            .success(function(data) {
-                $rootScope.$broadcast('status', data);
-                $timeout(function() { run(); }, 1);
-            })
-            .error(function(err) {
-                console.error(err);
-                timeout += 1000;
-                $timeout(function() { run(); }, timeout);
-            });
-        }
-        run();
-    }());
 });
 
 
@@ -39,7 +28,7 @@ app.filter('progressbarType', function() {
 
 app.filter('bytes2human', function() {
     return function(size) {
-        var sizes = [' B', ' K', ' M', ' G', ' T', ' P', ' E', ' Z', ' Y'];
+        var sizes = [' Byte', ' KiB', ' MiB', ' GiB', ' TiB', ' PiB', ' EiB', ' ZiB', ' YiB'];
         for (var i = 1; i < sizes.length; i++)
         {
             if (size < Math.pow(1024, i)) return (Math.round((size/Math.pow(1024, i-1))*100)/100) + sizes[i-1];
@@ -48,265 +37,459 @@ app.filter('bytes2human', function() {
     };
 });
 
-
-
-app.controller('memController', function($scope, $http) {
-    $scope.$on('status', function(ev, data) {
-        $scope.mem = data.mem;
-    });
-});
-
-app.controller('statusController', function($scope, $http) {
-    $scope.$on('status', function(ev, data) {
-        $scope.users = data.users;
-        $scope.time = data.time;
-        $http.jsonp('http://www.telize.com/geoip/' + data.time.ip + '?callback=JSON_CALLBACK')
-        .success(function(data) {
-            $scope.ip_tooltips = data.country;
-            if (data.region) {
-                $scope.ip_tooltips += '/' + data.region;
-            }
-            if (data.city) {
-                $scope.ip_tooltips += '/' + data.city;
-            }
-        });
-    });
-});
-
-app.controller('diskController', function($scope, $http, $filter) {
-    $scope.chartConfig = {
-        options: {
-            chart: {
-                type: 'spline'
-            }
-        },
-        plotOptions: {
-            series: {
-                stacking: ""
-            }
-        },
-        title: {
-            text: 'I/O'
-        },
-        credits: {
-            enabled: true
-        },
-        loading: true,
-        series: [
-            {
-                name: 'total',
-                data: [],
-                tooltip: {
-                    headerFormat: 'header',
-                    footerFormat: 'footer',
-                    pointFormatter: function () {
-                        return 'The value for <b>' + this.x +
-                        '</b> is <b>' + this.y + '</b>';
-                    }
-                }
-            }, {
-                name: 'total read',
-                data: []
-            }, {
-                name: 'total write',
-                data: []
-            }
-        ],
-        xAxis: {
-            type: 'datetime',
-            title: {
-                text: 'Time'
-            }
-        },
-        yAxis: {
-            title: {
-                text: 'value'
-            },
-            min: 0
+app.filter('seconds2human', function() {
+    return function(value) {
+        var days = Math.floor(value / 60 / 60 / 24);
+        var hours = Math.floor(value / 60 / 60 % 24);
+        var minutes = Math.floor(value / 60 % 60);
+        var seconds = Math.floor(value % 60);
+        var str = '';
+        if (days) {
+            str += days + ' d';
         }
+        if (hours) {
+            str += ' ' + hours + ' h';
+        }
+        if (minutes) {
+            str += ' ' + minutes + ' m';
+        }
+        if (seconds) {
+            str += ' ' + seconds + ' s';
+        }
+
+        return str;
     };
-    function render(name, value, index, date) {
-        $scope.chartConfig.series[index].name = name;
-        if ($scope.chartConfig.series[index].data.length === 6) {
-            $scope.chartConfig.series[index].data.splice(0, 1);
-        }
-        $scope.chartConfig.series[index].data.push({
-            x: Date.parse(date),
-            y: value
-        });
-    }
-    $scope.$on('status', function(ev, data) {
-        $scope.chartConfig.loading = false;
-        $scope.disk = data.disk;
-        render('total', data.disk.io.total, 0, data.time.now);
-        render('total read', data.disk.io.read, 1, data.time.now);
-        render('total write', data.disk.io.write, 2, data.time.now);
-        
-
-    });
 });
 
+app.filter('cutfloat', function () {
+    return function (value) {
+        return value.toFixed(2);
+    }
+});
 
-app.controller('cpuController', function($scope, $http) {
-    $scope.percentChartConfig = {
-        options: {
-            chart: {
-                type: 'spline'
+app.controller('mainController', function($scope, $timeout) {
+    $scope.isSystemCollapsed = false;
+    $scope.tpl = {
+        path: "/static/tpl/disk.html",
+        title: 'Disk'
+    };
+    $scope.isFull = false;
+    $scope.switchFull = function() {
+        //$scope.isFull = !$scope.isFull;
+
+        $timeout(function () { // delay to reflow highchart
+            $scope.$broadcast('highchartsng.reflow');
+        }, 100);
+    }
+});
+
+app.controller('systemController', function($scope, $http, $timeout) {
+    var interval = 1;
+    (function run() {
+        $http.get('/api/system')
+        .success(function(data) {
+            if (data.status) {
+                $scope.system = data.data;
+                $timeout(run, interval * 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
             }
-        },
-        title: {
-            text: 'CPU Percent'
-        },
-        credits: {
-            enabled: true
-        },
-        loading: true,
-        series: [{
-            name: 'CPU',
-            data: [],
-            dataLabels: {
-                enabled: true,
-                formatter: function () {
-                    return this.y + '%';
-                }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
+
+});
+
+app.controller('diskController', function($scope, $http, $timeout, $filter) {
+    var interval = 1;
+    $scope.disk_all_usage = '×';
+    $scope.diskTotalIOChartConfig = {
+        options: {
+            global: {
+                useUTC: false
+            },
+            chart: {
+                useUTC: false,
+                type: 'spline'
             },
             tooltip: {
-                enabled: true,
-                pointFormat: '{point.y}%'
-            }
-        }],
-        xAxis: {
-            type: 'datetime',
-            title: {
-                text: 'Time'
-            }
-        },
-        yAxis: {
-            title: {
-                text: 'value'
-            },
-            min: 0
-        }
-    };
-    $scope.loadChartConfig = {
-        options: {
-            chart: {
-                type: 'spline'
+                style: {
+                    padding: 10,
+                    fontWeight: 'bold'
+                },
+                formatter: function() {
+                    var text = $filter('bytes2human')(this.y);
+                    text += '/s';
+                    return text;
+                }
             }
         },
-        title: {
-            text: 'Load Average'
-        },
-        credits: {
-            enabled: true
-        },
-        loading: true,
         series: [{
-            name: '1m',
-            data: [],
-            dataLabels: {
-                enabled: false
-            }
+            name: 'total/s',
+            data: []
         }, {
-            name: '5m',
-            data: [],
-            dataLabels: {
-                enabled: false
-            }
-
+            name: 'write/s',
+            data: []
         }, {
-            name: '15m',
-            data: [],
-            dataLabels: {
-                enabled: false
-            }
-
+            name: 'read/s',
+            data: []
         }],
+        title: {
+            text: 'Disk Total I/O'
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: ''
+            }
+        },
         xAxis: {
             type: 'datetime',
             title: {
-                text: 'Time'
+                text: 'time'
             }
         },
-        yAxis: {
-            title: {
-                text: 'value'
-            },
-            min: 0,
-            formatter: function() {
-                return this.value + '/s';
-            }
-        }
+        loading: true
     };
-    $scope.$on('status', function(ev, data) {
-        $scope.percentChartConfig.loading = false;
-        $scope.loadChartConfig.loading = false;
-        $scope.cpu = data.cpu;
-        if ($scope.percentChartConfig.series[0].data.length === 6) {
-            $scope.percentChartConfig.series[0].data.splice(0, 1);
-        }
-        $scope.percentChartConfig.series[0].data.push({
-            x: Date.parse(data.time.now),
-            y: data.cpu.percent
+    $scope.showUsagePercent = function(device, percent) {
+        $scope.diskPercent = {
+            device: device,
+            percent: percent
+        };
+    };
+    $scope.hideUsagePercent = function(device, percent) {
+        $scope.diskPercent = undefined;
+    };
+    (function run() {
+        $http.get('/api/disk/usage?all_disk=' + $scope.disk_all_usage)
+        .success(function(data) {
+            if (data.status) {
+                $scope.disks = data.data;
+                $timeout(run, interval * 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
         });
+    }());
 
-        if ($scope.loadChartConfig.series[0].data.length === 6) {
-            $scope.loadChartConfig.series[0].data.splice(0, 1);
-            $scope.loadChartConfig.series[1].data.splice(0, 1);
-            $scope.loadChartConfig.series[2].data.splice(0, 1);
-        }
+    (function run() {
+        $http.get('/api/disk/per/io')
+        .success(function(data) {
+            if (data.status) {
+                $scope.disks_io = data.data;
+                $timeout(run, interval * 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
 
-        $scope.loadChartConfig.series[0].data.push({
-            x: Date.parse(data.time.now),
-            y: data.cpu.load_average[0]
-        });
-        $scope.loadChartConfig.series[1].data.push({
-            x: Date.parse(data.time.now),
-            y: data.cpu.load_average[1]
-        });
-        $scope.loadChartConfig.series[2].data.push({
-            x: Date.parse(data.time.now),
-            y: data.cpu.load_average[2]
-        });
+    (function run() {
+        $http.get('/api/disk/io')
+        .success(function(data) {
+            if (data.status) {
+                $scope.disk_total_io = data.data;
+                $scope.diskTotalIOChartConfig.loading = false;
 
-    });
+                var seriesArray = $scope.diskTotalIOChartConfig.series;
+                if (seriesArray[0].data.length < 6) {
+                    seriesArray[0].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.total
+                    });
+                    seriesArray[1].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.write
+                    });
+                    seriesArray[2].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.read
+                    });
+                } else {
+                    seriesArray[0].data.splice(0, 1);
+                    seriesArray[1].data.splice(0, 1);
+                    seriesArray[2].data.splice(0, 1);
+                }
+
+                $timeout(run, interval * 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $scope.diskTotalIOChartConfig.loading = true;
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $scope.diskTotalIOChartConfig.loading = true;
+            $timeout(run, interval * 1000);
+        });
+    }());
 });
 
 
-app.controller('netController', function($scope, $http) {
-    $scope.$on('status', function(ev, data) {
-        $scope.net = data.net;
-    });
+app.controller('netController', function($scope, $http, $timeout, $filter){
+    var interval = 5;
+
+    (function run() {
+        $http.get('/api/net/nic')
+        .success(function(data) {
+            if (data.status) {
+                // console.info(data.data);
+                $scope.netNic = data.data;
+                $timeout(run, 10000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
+    $scope.netTotalBytesIOChartConfig = {
+        options: {
+            global: {
+                useUTC: false
+            },
+            chart: {
+                useUTC: false,
+                type: 'spline'
+            },
+            tooltip: {
+                style: {
+                    padding: 10,
+                    fontWeight: 'bold'
+                }
+            }
+        },
+        series: [{
+            name: 'recv/s',
+            data: []
+        }, {
+            name: 'sent/s',
+            data: []
+        }],
+        title: {
+            text: 'Bytes I/O'
+        },
+        yAxis: {
+            min: 0,
+            title: {
+                text: ''
+            }
+        },
+        xAxis: {
+            type: 'datetime',
+            title: {
+                text: 'time'
+            }
+        },
+        loading: true
+    };
+    $scope.netTotalPackageIOChartConfig = angular.copy($scope.netTotalBytesIOChartConfig);
+    $scope.netTotalPackageIOChartConfig.title.text = "Package I/O";
+    $scope.netTotalBytesIOChartConfig.options.tooltip.formatter = function() {
+        var text = $filter('bytes2human')(this.y);
+        text += '/s';
+        return text;
+    };
+    $scope.netTotalPackageIOChartConfig.options.tooltip.formatter = function() {
+        return this.y;
+    };
+    (function run() {
+        $http.get('/api/net/io')
+        .success(function(data) {
+            if (data.status) {
+                // console.info(data.data);
+                $scope.netTotalIO = data.data;
+
+                $scope.netTotalBytesIOChartConfig.loading = false;
+                $scope.netTotalPackageIOChartConfig.loading = false;
+
+                var bytesSeriesArray = $scope.netTotalBytesIOChartConfig.series;
+                if (bytesSeriesArray[0].data.length < 4) {
+                    bytesSeriesArray[0].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.bytes_recv
+                    });
+                    bytesSeriesArray[1].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.bytes_sent
+                    });
+                } else {
+                    bytesSeriesArray[0].data.splice(0, 1);
+                    bytesSeriesArray[1].data.splice(0, 1);
+                }
+
+                var packageSeriesArray = $scope.netTotalPackageIOChartConfig.series;
+                if (packageSeriesArray[0].data.length <= 4) {
+                    packageSeriesArray[0].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.package_recv
+                    });
+                    packageSeriesArray[1].data.push({
+                        x: Date.parse(Date()),
+                        y: data.data.package_sent
+                    });
+                } else {
+                    packageSeriesArray[0].data.splice(0, 1);
+                    packageSeriesArray[1].data.splice(0, 1);
+                }
+
+                $timeout(run, 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
+
+    (function run() {
+        $http.get('/api/net/connections')
+        .success(function(data) {
+            if (data.status) {
+                // console.info(data.data);
+                $scope.connections = data.data;
+                $scope.proto = [];
+                $scope.status = [];
+                var local = {};
+                var remote = {};
+                var re = /(\d+\.\d+\.\d+\.\d+):(\d+)/;
+                angular.forEach(data.data, function(value, key) {
+                    if ($scope.proto.indexOf(value.proto) == -1) {
+                        $scope.proto.push(value.proto);
+                    }
+                    if ($scope.status.indexOf(value.status) == -1) {
+                        $scope.status.push(value.status);
+                    }
+                    var rv = re.exec(value.local);
+                    if (rv) {
+                        var item = {
+                            ip: rv[1],
+                            port: rv[2]
+                        };
+                        if (item.ip in local) {
+                            if (local[item.ip].indexOf(item.port) == -1) {
+                                local[item.ip].push(item.port);
+                            }
+                        } else {
+                            local[item.ip] = [];
+                        }
+                    }
+                });
+                $scope.local = [];
+                angular.forEach(local, function(value, key) {
+                    this.push({
+                        ip: key,
+                        port: "*"
+                    });
+                    for (var i = 0; i < value.length; i++) {
+                        this.push({
+                            ip: key,
+                            port: value[i]
+                        });
+                    }
+                }, $scope.local);
+                // remote
+                angular.forEach(data.data, function(value, key) {
+                    if ($scope.proto.indexOf(value.proto) == -1) {
+                        $scope.proto.push(value.proto);
+                    }
+                    if ($scope.status.indexOf(value.status) == -1) {
+                        $scope.status.push(value.status);
+                    }
+                    var rv = re.exec(value.remote);
+                    if (rv) {
+                        var item = {
+                            ip: rv[1],
+                            port: rv[2]
+                        };
+                        if (item.ip in remote) {
+                            if (remote[item.ip].indexOf(item.port) == -1) {
+                                remote[item.ip].push(item.port);
+                            }
+                        } else {
+                            remote[item.ip] = [];
+                        }
+                    }
+                });
+                $scope.remote = [];
+                angular.forEach(remote, function(value, key) {
+                    this.push({
+                        ip: key,
+                        port: "*"
+                    });
+                    for (var i = 0; i < value.length; i++) {
+                        this.push({
+                            ip: key,
+                            port: value[i]
+                        });
+                    }
+                }, $scope.remote);
+                $timeout(run, 1000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
+            }
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
 });
 
-app.controller('netConnectionsController', function($scope, $http) {
-
-    $scope.$on('status', function(ev, data) {
-        $scope.connections = data.net.connections;
-        $scope.protoes = [];
-        $scope.status = [];
-        for (var i = 0; i < data.net.connections.length; i++) {
-            var proto = data.net.connections[i].proto;
-            var status = data.net.connections[i].status;
-            if ($scope.protoes.indexOf(proto) <= -1) {
-                $scope.protoes.push(proto);
+app.controller('processesController', function ($scope, $http, $timeout) {
+    (function run() {
+        $http.get('/api/processes')
+        .success(function(data) {
+            if (data.status) {
+                //console.info(data.data);
+                $scope.processes = data.data;
+                $timeout(run, 10000);
+            } else {
+                interval *= interval + 1;
+                console.error('retry after ' + interval + ' seconds.');
+                $timeout(run, interval * 1000);
             }
-            if ($scope.status.indexOf(status) <= -1) {
-                $scope.status.push(status);
-            }
-        }
-    });
-});
-
-app.controller('procController', function($scope, $http) {
-    $scope.$on('status', function(ev, data) {
-        $scope.processes = data.processes;
-        $scope.users = [];
-        for (var i = 0; i < data.processes.length; i++) {
-            var username = data.processes[i].username;
-            if ($scope.users.indexOf(username) <= -1) {
-                $scope.users.push(username);
-            }
-        }
-    });
+        })
+        .error(function(data, status, headers, config) {
+            interval *= interval + 1;
+            console.error('retry after ' + interval + ' seconds.');
+            $timeout(run, interval * 1000);
+        });
+    }());
 });

@@ -1,3 +1,6 @@
+body {
+    padding-top: 40px;
+}
 .progress {
     margin-bottom: 0;
     border-radius: 10px;
@@ -5,4 +8,14 @@
 
 table {
     white-space:nowrap;
+}
+
+.disk-usage-header {
+    position: relative;
+}
+
+.disk-usage-all-switch {
+    position: absolute;
+    right: 5px;
+    cursor: pointer;
 }

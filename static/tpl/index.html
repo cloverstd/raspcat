@@ -1,337 +1,90 @@
-<div class="row">
-    <div class="col-md-4">
-        <div class="box">
-            <div class="panel panel-default" ng-controller="memController">
-                <div class="panel-heading text-center">Memory</div>
-                <div class="panel-body">
-                </div>
-
-                <!-- Table -->
-                <div class="table-responsive" style="">
-                    <table class="table table-bordered text-center">
-                        <thead>
-                            <tr>
-                                <th class="text-center">Name</th>
-                                <th class="text-center">Total</th>
-                                <th class="text-center">Used</th>
-                                <th class="text-center">Free</th>
-                                <th class="text-center">Available</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Memory</td>
-                                <td>{{ mem.memory.total|bytes2human }}</td>
-                                <td>{{ mem.memory.used|bytes2human }}</td>
-                                <td>{{ mem.memory.free|bytes2human }}</td>
-                                <td>{{ mem.memory.available|bytes2human }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="5">
-                                    <progressbar animate="false" value="mem.memory.percent" type="success"><b>{{ mem.memory.percent }}%</b></progressbar>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="5">
-                                    <progressbar animate="false" value="(mem.memory.used/mem.memory.total) * 100" type="success"><b>{{ ((mem.memory.used/mem.memory.total) * 100).toFixed(2) }}%</b></progressbar>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Swap</td>
-                                <td>{{ mem.swap.total|bytes2human }}</td>
-                                <td>{{ mem.swap.used|bytes2human }}</td>
-                                <td>{{ mem.swap.free|bytes2human }}</td>
-                                <td>{{ mem.swap.available|bytes2human }}</td>
-                            </tr>
-                            <tr ng-show="mem.swap.percent">
-                                <td colspan="5">
-                                    <progressbar animate="false" value="mem.swap.percent" type="success"><b>{{ mem.swap.percent }}%</b></progressbar>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-
-        <div class="box">
-            <div class="panel panel-default" ng-controller="diskController">
-            <!-- Default panel contents -->
-                <div class="panel-heading text-center">Disk</div>
-                <div class="panel-body">
-                    <div class="table-responsive" style="">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>Read</th>
-                                    <th>Write</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr ng-repeat="p in disk.perdisk_io">
-                                    <td>{{ p.name }}</td>
-                                    <td>{{ p.read|bytes2human }}/s</td>
-                                    <td>{{ p.write|bytes2human }}/s</td>
-                                    <td>{{ p.total|bytes2human }}/s</td>
-                                </tr>
-                            </tbody>
-                        </table>
+<div class="row" ng-controller="mainController">
+    <div ng-class="isFull ? 'col-md-12' : 'col-md-8'">
+        <div class="panel panel-success">
+            <div class="panel-heading">
+                <div class="clearfix">
+                    <div class="pull-left">
+                        {{ tpl.title }}
                     </div>
-                    <hr>
-                    <highchart config="chartConfig"></highchart>
+                    <div class="pull-right">
+                        <label class="btn btn-default" ng-model="isFull" btn-checkbox btn-checkbox-true="true" btn-checkbox-false="false" ng-click="switchFull()"><i class="fa fa-arrows-h"></i></label>
+                    </div>
                 </div>
-
-                <!-- Table -->
-                <div class="table-responsive" style="">
-                    <table class="table table-bordered text-center">
-                        <thead>
-                            <tr>
-                                <th colspan="6" class="text-center">
-                                    Usage
-                                </th>
-                            </tr>
-                            <tr>
-                                <th class="text-center">Device</th>
-                                <th class="text-center">Free</th>
-                                <th class="text-center">Used</th>
-                                <th class="text-center">Total</th>
-                                <th class="text-center">Fstype</th>
-                                <th class="text-center">Mountpoint</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat-start="p in disk.usage">
-                            </tr>
-                            <tr>
-                                <td>{{ p.device }}</td>
-                                <td>{{ p.free|bytes2human }}</td>
-                                <td>{{ p.used|bytes2human }}</td>
-                                <td>{{ p.total|bytes2human }}</td>
-                                <td>{{ p.fstype }}</td>
-                                <td>{{ p.mountpoint }}</td>
-                            </tr>
-                            <tr>
-                                <td colspan="6">
-                                    <progressbar animate="false" value="p.percent" type="{{ p.percent|progressbarType }}"><b>{{ p.percent }}%</b></progressbar>
-                                </td>
-                            </tr>
-                            <tr ng-repeat-end>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            </div>
+            <div class="panel-body">
+                <div ng-include="tpl.path"></div>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="box">
-            <div class="panel panel-default" ng-controller="statusController">
-                <!-- Default panel contents -->
-                <div class="panel-heading text-center">{{ time.hostname }}</div>
-                <div class="panel-body">
-                    <p>
-                        boot time: <i class="fa fa-clock-o"></i> {{ time.boot_time }}
-                    </p>
-                    <p>CPU temperature: {{ time.temp.cpu }}℃</p>
-                    <p>GPU temperature: {{ time.temp.gpu }}℃</p>
-                    <p>system time: <i class="fa fa-clock-o"></i> {{ time.now }}</p>
-                    <p>Public IP: <a href="#" tooltip="{{ip_tooltips}}">{{ time.ip }}</a></p>
-                    <p>
-                        up: {{ time.up.days }} {{ time.up.days > 1 ? 'days' : 'day'  }}, {{ time.up.hours }} {{ time.up.hours > 1 ? 'hours' : 'hour'  }} {{ time.up.minutes }} {{ time.up.minutes > 1 ? 'minutes' : 'minute'  }} {{ time.up.seconds }} {{ time.up.seconds > 1 ? 'second' : 'second'  }} 
-                    </p>
-                </div>
-
-                <!-- Table -->
-                <div class="table-responsive" style="" ng-show="users.length">
-                    <table class="table table-bordered text-center">
-                        <thead>
-                            <tr>
-                                <th colspan="4" class="text-center">
-                                    <i class="fa" ng-class="users.length > 1 ? 'fa-users' : 'fa-user'" ></i>
-                                </th>
-                            </tr>
-                            <tr>
-                                <th class="text-center">Name</th>
-                                <th class="text-center">Terminal</th>
-                                <th class="text-center">Host</th>
-                                <th class="text-center">Logined</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="user in users">
-                                <td>{{ user.name }}</td>
-                                <td>{{ user.terminal }}</td>
-                                <td>{{ user.host }}</td>
-                                <td>{{ user.logined }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        <div class="box">
-            <div class="panel panel-default" ng-controller="cpuController">
-                <!-- Default panel contents -->
-                <div class="panel-heading text-center">CPU</div>
-                <div class="panel-body">
-                    <highchart config="percentChartConfig"></highchart>
-                    <highchart config="loadChartConfig"></highchart>
-                </div>
-            </div>
-        </div>
-        <div class="box">
-            <div class="panel panel-default" ng-controller="procController">
-                <!-- Default panel contents -->
-                <div class="panel-heading text-center">Processes</div>
-                <div class="panel-body">
-
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>PID</th>
-                                <th>PPID</th>
-                                <th>Name</th>
-                                <th>Username</th>
-                                <th>exe</th>
-                                <th>cwd</th>
-                                <th>Create Time</th>
-                                <th>Memory Percent</th>
-                                <th>CPU Percent</th>
-                                <th>Status</th>
-                            </tr>
-                            <tr>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th>
-                                    <select ng-model="user">
-                                        <option value="">--ALL--</option>
-                                        <option ng-repeat="p in users" value="{{ p }}">{{ p }}</option>
-                                    </select>
-                                </th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="proc in processes|filter: user">
-                                <td>{{ proc.pid }}</td>
-                                <td>{{ proc.ppid }}</td>
-                                <td>{{ proc.name }}</td>
-                                <td>{{ proc.username }}</td>
-                                <td>{{ proc.exe }}</td>
-                                <td>{{ proc.cwd }}</td>
-                                <td>{{ proc.create_time }}</td>
-                                <td>{{ proc.memory_percent }}</td>
-                                <td>{{ proc.cpu_percent }}</td>
-                                <td>{{ proc.status }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="col-md-4" ng-hide="isFull">
+        <div class="well">
+            <button class="btn btn-default" ng-model="isSystemCollapsed" btn-checkbox btn-checkbox-true="false" btn-checkbox-false="true">System</button>
+            <div class="btn-group">
+                <label class="btn btn-success" ng-model="tpl.path" ng-click="tpl.title = 'Disk'" btn-radio="'/static/tpl/disk.html'" uncheckable>Disk</label>
+                <label class="btn btn-success" ng-model="tpl.path" ng-click="tpl.title = 'Net'" btn-radio="'/static/tpl/net.html'" uncheckable>Net</label>
+                <label class="btn btn-success" ng-model="tpl.path" ng-click="tpl.title = 'Processes'" btn-radio="'/static/tpl/processes.html'" uncheckable>Processes</label>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="box">
-            <div class="panel panel-default" ng-controller="netController">
-                <!-- Default panel contents -->
-                <div class="panel-heading text-center">Net</div>
-                <div class="panel-body">
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th rowspan="2" style="line-height:58px;">Device</th>
-                                <th rowspan="2" style="line-height:58px;" class="text-center">IP</th>
-                                <th colspan="2" class="text-center">Bytes</th>
-                                <th colspan="2" class="text-center">Packets</th>
-                            </tr>
-                            <tr>
-                                <th>recv</th>
-                                <th>send</th>
-                                <th>recv</th>
-                                <th>send</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="nic in net.pernic">
-                                <td>{{ nic.name }}</td>
-                                <td>{{ nic.addrs.ipv4[0].addr }}</td>
-                                <td>{{ nic.bytes.per_sec.recv|bytes2human }}/s</td>
-                                <td>{{ nic.bytes.per_sec.sent|bytes2human }}/s</td>
-                                <td>{{ nic.packets.per_sec.recv }}</td>
-                                <td>{{ nic.packets.per_sec.sent }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    
-                </div>
+    <div class="col-md-4" ng-controller="systemController" collapse="isSystemCollapsed" ng-hide="isFull">
+        <div class="panel panel-default panel-info" ng-if="system">
+        <!-- Default panel contents -->
+            <div class="panel-heading text-center">System</div>
+            <div class="panel-body">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th colspan="2" class="text-center">Hostname</th>
+                            <td>{{ system.hostname }}</td>
+                        </tr>
+                        <tr>
+                            <th colspan="2" class="text-center">Boot Time</th>
+                            <td>{{ system.boot_time | amDateFormat:'YYYY-MM-DD H:mm:ss' }}</td>
+                        </tr>
+                        <tr>
+                            <th colspan="2" class="text-center">System Time</th>
+                            <td>{{ system.now| amDateFormat:'YYYY-MM-DD H:mm:ss' }}</td>
+                        </tr>
+                        <tr>
+                            <th rowspan="2" style="line-height: 53px;">Temperature</th>
+                            <th>GPU</th>
+                            <td>{{ system.temp.GPU }} ℃</td>
+                        </tr>
+                        <tr>
+                            <th>CPU</th>
+                            <td>{{ system.temp.CPU }} ℃</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #ddd;">
+                            <th colspan="2" class="text-center">System Up</th>
+                            <td>{{ (system.now-system.boot_time) | seconds2human }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-        </div>
-        <div class="box">
-            <div class="panel panel-default" ng-controller="netConnectionsController">
-                <!-- Default panel contents -->
-                <div class="panel-heading text-center">Net Connections</div>
-                <div class="panel-body">
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th class="text-center">PID</th>
-                                <th class="text-center">Proto</th>
-                                <th class="text-center">Local address</th>
-                                <th class="text-center">Remote address</th>
-                                <th class="text-center">Status</th>
-                                <th class="text-center">Program name</th>
-                            </tr><tr>
-                                <th class="text-center">
 
-                                </th>
-                                <th class="text-center">
-                                    <select ng-model="proto">
-                                        <option value="">--ALL--</option>
-                                        <option ng-repeat="p in protoes" value="{{ p }}">{{ p }}</option>
-                                    </select>
-                                </th>
-                                <th class="text-center">
-                                </th>
-                                <th class="text-center">
-                                </th>
-                                <th class="text-center">
-                                    <select ng-model="statusFilter">
-                                        <option value="">--ALL--</option>
-                                        <option ng-repeat="p in status" value="{{ p }}">{{ p }}</option>
-                                    </select>
-                                </th>
-                                <th class="text-center">
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr ng-repeat="connection in connections|filter: proto|filter: statusFilter">
-                                <td>{{ connection.pid }}</td>
-                                <td>{{ connection.proto }}</td>
-                                <td>{{ connection.local }}</td>
-                                <td>{{ connection.remote }}</td>
-                                <td>{{ connection.status }}</td>
-                                <td>{{ connection.program }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                    
-                </div>
+            <!-- Table -->
+            <div class="table-responsive" ng-if="system.users">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th class="text-center" colspan="4"><i class="fa" ng-class="system.users.length == 1 ? 'fa-user' : 'fa-users'"></i></th>
+                        </tr>
+                        <tr>
+                            <th class="text-center">Name</th>
+                            <th class="text-center">Logined</th>
+                            <th class="text-center">Host</th>
+                            <th class="text-center">Terminal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="user in system.users">
+                            <td class="text-center">{{ user.name }}</td>
+                            <td class="text-center">{{ user.logined | amDateFormat:'YYYY-MM-DD H:mm:ss'}}</td>
+                            <td class="text-center">{{ user.host }}</td>
+                            <td class="text-center">{{ user.terminal }}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

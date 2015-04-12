@@ -1,0 +1,72 @@
+<div class="row" ng-controller="netController">
+    <div class="col-xs-4">
+        <div class="table-responsive">
+            <table class="table">
+                <tbody ng-repeat="nic in netNic">
+                    <tr ng-repeat-start="(name, info) in nic"></tr>
+                    <tr>
+                        <th colspan="2" class="text-center">{{ name }}</th>
+                    </tr>
+                    <tr ng-repeat="(k, v) in info">
+                        <th class="text-center">{{ k }}</th>
+                        <td class="text-center">{{ v }}</td>
+                    </tr>
+                    <tr ng-repeat-end></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-xs-4">
+        <highchart id="net-bytes-chart" config="netTotalBytesIOChartConfig"></highchart>
+    </div>
+    <div class="col-xs-4">
+        <highchart config="netTotalPackageIOChartConfig"></highchart>
+    </div>
+    {{ selectedLocal }}
+    <div class="col-xs-12">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>PID</th>
+                        <th>Program</th>
+                        <th>Proto</th>
+                        <th>Local</th>
+                        <th>Remote</th>
+                        <th>Status</th>
+                    </tr>
+                    <tr>
+                        <th></th>
+                        <th></th>
+                        <th>
+                            <select ng-model="selectedProto" ng-options="p for p in proto">
+                                <option value="">--ALL--</option>
+                            </select>
+                        </th>
+                        <th>
+                            <!-- <select ng-model="selectedLocal" ng-options="item.port group by item.ip for item in local"></select> -->
+                        </th>
+                        <th>
+                            <!-- <select ng-model="selectedRemote" ng-options="item.port group by item.ip for item in remote"></select> -->
+                        </th>
+                        <th>
+                            <select ng-model="selectedStatus" ng-options="p for p in status">
+                                <option value="">--ALL--</option>
+                            </select>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="connection in connections| filter: selectedProto| filter: selectedStatus">
+                        <td>{{ connection.pid }}</td>
+                        <td>{{ connection.program }}</td>
+                        <td>{{ connection.proto }}</td>
+                        <td>{{ connection.local }}</td>
+                        <td>{{ connection.remote }}</td>
+                        <td>{{ connection.status }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

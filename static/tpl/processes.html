@@ -1,0 +1,36 @@
+<div class="row" ng-controller="processesController">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th>PID</th>
+                <th>PPID</th>
+                <th>Name</th>
+                <th>User</th>
+                <th>Terminal</th>
+                <th>Status</th>
+                <th>CPU
+                    <i class="fa" ng-class="predicate=='cpu_percent'? 'fa-caret-down' : 'fa-caret-up'" ng-click="predicate='cpu_percent'"></i>
+                </th>
+                <th>Memory
+                    <i class="fa" ng-class="predicate=='memory_percent'? 'fa-caret-down' : 'fa-caret-up'" ng-click="predicate='memory_percent'"></i>
+                </th>
+                <th>Create Time</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr ng-repeat="process in processes|orderBy:predicate:true">
+                <td>{{ process.pid }}</td>
+                <td>{{ process.ppid }}</td>
+                <td>{{ process.name }}</td>
+                <td>{{ process.username }}</td>
+                <td>{{ process.terminal|| '-' }}</td>
+                <td>{{ process.status }}</td>
+                <td>{{ process.cpu_percent|cutfloat }}%</td>
+                <td>{{ process.memory_percent|cutfloat }}%</td>
+                <td>{{ process.create_time| amDateFormat:'YYYY-MM-DD H:mm:ss' }}</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
