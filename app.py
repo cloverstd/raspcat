@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from gevent.wsgi import WSGIServer
 from gevent import sleep
 from socket import AF_INET, SOCK_STREAM, SOCK_DGRAM
@@ -45,8 +45,13 @@ def api_mem():
 @app.route('/api/disk/usage')
 def api_disk_usage():
     try:
+        all_disk = request.args.get('all_disk')
+        if all_disk == '✓':
+            all_disk = True
+        else:
+            all_disk = False
         parts = list()
-        for part in psutil.disk_partitions(all=True):
+        for part in psutil.disk_partitions(all=all_disk):
             usage = psutil.disk_usage(part.mountpoint)._asdict()
             part = part._asdict()
             usage.update(part)
@@ -125,15 +130,22 @@ def api_per_disk_io(interval=1):
             'err': e.message
         })
 
-
-@app.route('/api/system')
-def api_system():
+@app.route('/api/net/ip')
+def api_net_ip():
     url = "http://www.telize.com/ip"
     try:
         ip = urllib2.urlopen(url).read().strip()
     except:
         ip = None
 
+    return jsonify({
+        'status': True,
+        'data': ip
+    })
+
+
+@app.route('/api/system')
+def api_system():
     try:
         res = os.popen('/opt/vc/bin/vcgencmd measure_temp').readline()
         gpu_temp = float(res.replace("temp=","").replace("'C\n",""))
@@ -158,7 +170,6 @@ def api_system():
                 'boot_time': psutil.boot_time(),
                 'now': time.time(),
                 'hostname': socket.gethostname(),
-                'ip': ip,
                 'temp': {
                     'GPU': gpu_temp,
                     'CPU': cpu_temp,
